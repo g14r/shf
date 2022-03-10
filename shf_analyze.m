@@ -692,7 +692,7 @@ switch (what)
                             % go subject by subject
                             for s = 1:ns
                                 % load data for this subject and day (exclude error trials)
-                                ds = getrow(D, D.SN == subvec(s) & D.Day == d & D.isError==0); % select subj / day
+                                ds = getrow(D, D.SN==subvec(s) & D.Day==d & D.isError==0); % select subj / day
                                 % plot the movement time as a function of horizon to get the initial values
                                 [x,y] = plt.line(ds.Horizon, ds.MT, 'style',bksty); %close; % get data
                                 % set initial parameters for the exponential model
