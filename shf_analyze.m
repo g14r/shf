@@ -680,25 +680,34 @@ switch (what)
                         % out
                         varargout = {S}; %return main structure
                     case 'within_days'
+                        % initialize empty fields to be filled
+                        T.SN = []; 
+                        T.day = [];
+                        T.a = []; 
+                        T.b = []; 
+                        T.c = []; 
+                        T.h = [];
                         % separately for different days
-                        T.SN = []; T.day = [];
-                        T.a = []; T.b = []; T.c = []; T.h = [];
                         for d = 1:numel(unique(D.Day))
-                            figure('Name', 'Exp model of MT results'); set(gcf, 'Units','normalized', 'Position',[0.1,0.1,0.8,0.8], 'Resize','off', 'Renderer','painters');
-                            subplot(2,2,1)
-                            for s = 1 : ns
+                            % go subject by subject
+                            for s = 1:ns
+                                % load data for this subject and day (exclude error trials)
                                 ds = getrow(D, D.SN == subvec(s) & D.Day == d & D.isError==0); % select subj / day
-                                [x,y]=plt.line(ds.Horizon,ds.MT, 'style',bksty); close; % get data
+                                % plot the movement time as a function of horizon to get the initial values
+                                [x,y] = plt.line(ds.Horizon, ds.MT, 'style',bksty); %close; % get data
+                                % set initial parameters for the exponential model
                                 init_params = [y(1), 1, y(end)]; % initial parameters for the exp model
-                                %init_params = [6000, 0.8, 3000]; % initial parameters for the exp model
+                                % define the exponential function model given the initial parameters
                                 fcn = @(init_params,x)(init_params(1) * exp(-init_params(2)*(x-1)) + init_params(3)); % exp function model
-                                fit_params = nlinfit(x,y',fcn,init_params); % fit data to the model
-                                horizon = -log(1-thres/100) / fit_params(2) + 1; % find the "effective" planning horizon given the thres (101% of asymptote)
+                                % fit this subj data to the model using nlinfit (estimate coefficients)
+                                fit_params = nlinfit(x, y', fcn, init_params); % fit data to the model
+                                % find the "effective" planning horizon given the threshold (e.g., 99% of asymptote)
+                                horizon = -log(1-thres/100) / fit_params(2) + 1; % solve the equation for f
                                 
-                                % plot single subject (optional)
-                                pred_x=1:.01:13;
+                                % plot single subject fit (optional, to visually inspect the fit to the data)
+                                pred_x = 1:.01:13;
                                 pred_y = fit_params(1) * exp(-fit_params(2)*(pred_x-1)) + fit_params(3);
-                                hold on; plot(pred_x,pred_y, 'color','r', 'linewidth',1); ylim([3000 8000])
+                                hold on; plot(pred_x, pred_y, 'color','r', 'linewidth',1); ylim([3000 8000])
                                 drawline(fit_params(3) + fit_params(3)*0.01, 'dir','horz', 'linestyle',':')
                                 drawline(horizon, 'dir','vert', 'linestyle',':')
                                 xlabel('Viewing window (W)'); ylabel('Movement time (ms)'); set(gca,'fontsize',fs); axis square;
@@ -712,7 +721,7 @@ switch (what)
                                 T.h = [T.h; horizon];
                             end
                         end
-                        % save outputs
+                        % save output structure
                         save( fullfile( pathToAnalyze, sprintf('shf_exp_model_fit_thres_%dpct.mat',thres)), '-struct', 'T');
                         % out
                         varargout = {S,T}; %return main structure
@@ -1083,16 +1092,14 @@ end
 % fcn=@(params)loss_fcn(y,exp_model(params,x));
 % fit_params=fminsearch(fcn,init_params);
 % end
-%
+
 % function [y_pred]=exp_model(params,x)
 % a=params(1); % initial value / starting point
 % r=params(2); % decay rate
 % c=params(3); % asymptote / plateau
 % y_pred = a * exp(-r*(x-1)) + c;
-%
-% y = c + .05*a
 % end
-%
+
 % function [loss]=loss_fcn(y,y_pred)
 % n=numel(y);
 % loss = sum((y - y_pred).^2) / n;
